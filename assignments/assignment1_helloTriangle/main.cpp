@@ -67,6 +67,8 @@ int main() {
 	//Allocate space for + send vertex data to GPU
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+
+
 	//Create a new vertex shader object
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	//Supply the shader object with source code
