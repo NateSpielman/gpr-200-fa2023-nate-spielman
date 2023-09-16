@@ -72,7 +72,9 @@ int main() {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
 
-	unsigned int shader = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+	std::string vertexShaderSource = ns::loadShaderSourceFromFile("assets/vertextSahder.vert");
+	std::string fragmentShaderSource = ns::loadShaderSourceFromFile("assets/fragmentShader.frag");
+	unsigned int shader = createShaderProgram(vertexShaderSource.c_str(), fragmentShaderSource.c_str());
 	unsigned int vao = createVAO(vertices, 3);
 
 	glUseProgram(shader);
