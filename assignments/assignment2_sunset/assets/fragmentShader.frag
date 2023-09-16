@@ -1,7 +1,7 @@
 #version 450
 	out vec4 FragColor;
-	in vec4 Color;
-	uniform float _Time;
+	uniform vec3 _Color;
+	uniform float _Brightness;
 	void main(){
-		FragColor = Color * abs(sin(_Time));
+		FragColor = vec4(_Color * _Brightness,1.0);
 	}
