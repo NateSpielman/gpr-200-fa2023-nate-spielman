@@ -63,6 +63,23 @@ int main() {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
 
+	//Time Speed
+	float tSpeed = 1.0f;
+
+	//Background Colors
+	float dayBColor[3] = { 0.91f, 0.78f, 0.329f };     //Day Bottom Color
+	float dayTColor[3] = { 0.8f, 0.2f, 0.1f };         //Day Top Color
+	float nightBColor[3] = { 0.58f, 0.043f, 0.259f };  //Night Bottom Color
+	float nightTColor[3] = { 0.188f, 0.141f, 0.329f }; //Night Top Color
+
+	//Sun Values
+	float sunR = 0.3f;							  //Sun Radius 
+	float sunColor[3] = { 1.0f, 0.773f, 0.129f }; //Sun Color
+
+	//Foreground Colors
+	float mountainColor[3] = { 0.153f, 0.439f, 0.388f }; //Mountain Color
+	float hillsColor[3] = { 0.153f, 0.588f, 0.388f };    //Hills Color
+
 	ns::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
 	shader.use();
 
@@ -73,6 +90,27 @@ int main() {
 		glfwPollEvents();
 		glClearColor(0.3f, 0.4f, 0.9f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		float time = (float)glfwGetTime();
+
+		//Set Shader Variables 
+			//Resolution
+		shader.setVec2("_Resolution", SCREEN_WIDTH, SCREEN_HEIGHT);
+			//Time + Time Speed
+		shader.setFloat("_Time", time);
+		shader.setFloat("_TimeSpeed", tSpeed);
+			//Background Colors
+		shader.setVec3("_DayBottom", dayBColor[0], dayBColor[1], dayBColor[2]);
+		shader.setVec3("_DayTop", dayTColor[0], dayTColor[1], dayTColor[2]);
+		shader.setVec3("_NightBottom", nightBColor[0], nightBColor[1], nightBColor[2]);
+		shader.setVec3("_NightTop", nightTColor[0], nightTColor[1], nightTColor[2]);
+			//Sun Radius + Color
+		shader.setFloat("_SunR", sunR);
+		shader.setVec3("_SunColor", sunColor[0], sunColor[1], sunColor[2]);
+			//Mountain Color
+		shader.setVec3("_MountainColor", mountainColor[0], mountainColor[1], mountainColor[2]);
+			//Hills Color
+		shader.setVec3("_HillsColor", hillsColor[0], hillsColor[1], hillsColor[2]);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 
