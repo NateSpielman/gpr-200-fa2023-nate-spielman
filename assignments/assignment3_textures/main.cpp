@@ -8,7 +8,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <ew/shader.h>
+#include <ns/shader.h>
 #include <ns/texture.h>
 
 struct Vertex {
@@ -32,6 +32,9 @@ unsigned short indices[6] = {
 	0, 1, 2,
 	2, 3, 0
 };
+
+//Time Speed
+float tSpeed = 1.0f;
 
 int main() {
 	printf("Initializing...");
@@ -58,12 +61,25 @@ int main() {
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
+	
+	//Create shaders for background and character
+	ns::Shader backgroundShader("assets/background.vert", "assets/background.frag");
+	ns::Shader characterShader("assets/character.vert", "assets/character.frag");
 
-	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
+	//Create textures for background, character, and noise
+	unsigned int noiseTexture = ns::loadTexture("assets/noiseTexture.png", GL_REPEAT, GL_LINEAR);
+	unsigned int backgroundTexture = ns::loadTexture("assets/spaceBackground.png", GL_REPEAT, GL_LINEAR);
+	unsigned int characterTexture = ns::loadTexture("assets/penguin.png", GL_CLAMP_TO_BORDER, GL_NEAREST);
 
-	//unsigned int brickTexture = ns::loadTexture("assets/brick.png", GL_REPEAT, GL_LINEAR);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, brickTexture);
+	//Place noise texture in unit 0
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+	//Place background texture in unit 1
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, backgroundTexture);
+	//Place character texture in unit 2
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, characterTexture);
 
 	unsigned int quadVAO = createVAO(vertices, 4, indices, 6);
 
@@ -73,9 +89,26 @@ int main() {
 		glfwPollEvents();
 		glClearColor(0.3f, 0.4f, 0.9f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		//Set uniforms
-		shader.use();
+		//Get time
+		float time = (float)glfwGetTime();
+
+		//Background
+		backgroundShader.use();
+		//Sample from unit 0 and 1
+		backgroundShader.setInt("_NoiseTexture", 0);
+		backgroundShader.setInt("_Texture", 1);
+		backgroundShader.setFloat("_Time", time);
+		backgroundShader.setFloat("_TimeSpeed", tSpeed);
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+
+		//Character
+		characterShader.use();
+		//Sample from unit 2
+		characterShader.setInt("_Texture", 2);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 
