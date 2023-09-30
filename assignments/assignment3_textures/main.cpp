@@ -9,6 +9,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include <ew/shader.h>
+#include <ns/texture.h>
 
 struct Vertex {
 	float x, y, z;
@@ -59,6 +60,10 @@ int main() {
 	ImGui_ImplOpenGL3_Init();
 
 	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
+
+	//unsigned int brickTexture = ns::loadTexture("assets/brick.png", GL_REPEAT, GL_LINEAR);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, brickTexture);
 
 	unsigned int quadVAO = createVAO(vertices, 4, indices, 6);
 
