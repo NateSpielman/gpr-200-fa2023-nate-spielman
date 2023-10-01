@@ -36,6 +36,9 @@ unsigned short indices[6] = {
 //Time Speed
 float tSpeed = 1.0f;
 
+//Distortion Intensity 
+float distortion = 0.05;
+
 int main() {
 	printf("Initializing...");
 	if (!glfwInit()) {
@@ -100,16 +103,24 @@ int main() {
 		//Sample from unit 0 and 1
 		backgroundShader.setInt("_NoiseTexture", 0);
 		backgroundShader.setInt("_Texture", 1);
+		//Set Time + Time speed
 		backgroundShader.setFloat("_Time", time);
 		backgroundShader.setFloat("_TimeSpeed", tSpeed);
+		//Set distortion intensity 
+		backgroundShader.setFloat("_Distortion", distortion);
 
+		//Draw
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 
 		//Character
 		characterShader.use();
 		//Sample from unit 2
 		characterShader.setInt("_Texture", 2);
+		//Set Time + Time speed
+		characterShader.setFloat("_Time", time);
+		characterShader.setFloat("_TimeSpeed", tSpeed);
 
+		//Draw
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 
 		//Render UI
@@ -119,6 +130,7 @@ int main() {
 			ImGui::NewFrame();
 
 			ImGui::Begin("Settings");
+			ImGui::SliderFloat("Distortion Intensity", &distortion, 0.0f, 0.5f);
 			ImGui::End();
 
 			ImGui::Render();

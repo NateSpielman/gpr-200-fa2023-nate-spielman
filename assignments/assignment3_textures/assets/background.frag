@@ -6,17 +6,23 @@ in vec2 UV;
 uniform float _Time;
 uniform float _TimeSpeed;
 
+//Distortion Intensity
+uniform float _Distortion;
+
 //Textures
 uniform sampler2D _Texture;
 uniform sampler2D _NoiseTexture;
 
 void main(){
-	//Set Time
-	float t = sin(_Time * _TimeSpeed) * 0.5 + 0.5;
+	//Noise coordinates that offset from the UV so they scroll over time
+	vec2 noiseCoord = vec2(UV.x + (_Time * _TimeSpeed), UV.y);
 
-	float noise = texture(_NoiseTexture, UV).r;	
-	vec2 uv = UV + noise;
-	vec4 color = texture(_Texture, uv);
+	//Sample from noise texture
+	float noise = texture(_NoiseTexture, noiseCoord).r;	
+
+	//Offset UV coordinates for background texture
+	//Minuses by _Distortion/2 to recenter the background
+	vec2 uv = UV + (noise * _Distortion) - (_Distortion / 2);
 	
-	FragColor = vec4(color);
+	FragColor = texture(_Texture, uv);
 }
