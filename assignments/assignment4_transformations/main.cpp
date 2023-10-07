@@ -8,9 +8,10 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <ew/shader.h>
 #include <ew/ewMath/vec3.h>
 #include <ew/procGen.h>
+#include <ns/shader.h>
+#include <ns/transformations.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
@@ -51,7 +52,8 @@ int main() {
 	//Depth testing - required for depth sorting!
 	glEnable(GL_DEPTH_TEST);
 
-	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
+	ns::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
+	ns::Transform transform;
 	
 	//Cube mesh
 	ew::Mesh cubeMesh(ew::createCube(0.5f));
@@ -64,6 +66,7 @@ int main() {
 
 		//Set uniforms
 		shader.use();
+		shader.setMat4("_Model", transform.getModelMatrix());
 
 		//TODO: Set model matrix uniform
 
@@ -76,6 +79,9 @@ int main() {
 			ImGui::NewFrame();
 
 			ImGui::Begin("Transform");
+			ImGui::DragFloat3("Position", &transform.position.x, 0.05f);
+			ImGui::DragFloat3("Rotation", &transform.rotation.x, 0.05f);
+			ImGui::DragFloat3("Scale", &transform.scale.x, 0.05f);
 			ImGui::End();
 
 			ImGui::Render();

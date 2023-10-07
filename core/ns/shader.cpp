@@ -88,5 +88,10 @@ namespace ns {
 	{
 		glUniform4f(glGetUniformLocation(m_id, name.c_str()), x, y, z, w);
 	}
+
+	void Shader::setMat4(const std::string& name, const ew::Mat4& v) const
+	{
+		glUniformMatrix4fv(glGetUniformLocation(m_id, name.c_str()), 1, GL_FALSE, &v[0][0]);
+	}
 }
 
