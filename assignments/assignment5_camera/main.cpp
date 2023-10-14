@@ -27,7 +27,7 @@ ns::Camera camera {
 	ew::Vec3(0,0,5), 
 	ew::Vec3(0,0,0),
 	60.0f,
-	(SCREEN_WIDTH/SCREEN_HEIGHT),
+	(float(SCREEN_WIDTH)/float(SCREEN_HEIGHT)),
 	0.1f,
 	100.0f,
 	true,
@@ -79,11 +79,19 @@ int main() {
 		cubeTransforms[i].position.y = i / (NUM_CUBES / 2) - 0.5;
 	}
 
+	//For storing the viewport data to access current width and height of screen
+	GLint viewportData[4];
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		glClearColor(0.3f, 0.4f, 0.9f, 1.0f);
 		//Clear both color buffer AND depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//Gets viewport data
+		glGetIntegerv(GL_VIEWPORT, viewportData);
+		//set camera aspect ratio to align with current viewport
+		camera.aspectRatio = float(viewportData[2]) / float(viewportData[3]);
 
 		//Set uniforms
 		shader.use();
