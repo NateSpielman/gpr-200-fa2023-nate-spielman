@@ -8,9 +8,11 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <ew/shader.h>
 #include <ew/procGen.h>
-#include <ew/transform.h>
+
+#include <ns/shader.h>
+#include <ns/transformations.h>
+#include <ns/camera.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
@@ -19,7 +21,18 @@ const int SCREEN_WIDTH = 1080;
 const int SCREEN_HEIGHT = 720;
 
 const int NUM_CUBES = 4;
-ew::Transform cubeTransforms[NUM_CUBES];
+ns::Transform cubeTransforms[NUM_CUBES];
+
+ns::Camera camera {
+	ew::Vec3(0,0,5), 
+	ew::Vec3(0,0,0),
+	60.0f,
+	(SCREEN_WIDTH/SCREEN_HEIGHT),
+	0.1f,
+	100.0f,
+	true,
+	6.0f
+};
 
 int main() {
 	printf("Initializing...");
@@ -54,7 +67,7 @@ int main() {
 	//Depth testing - required for depth sorting!
 	glEnable(GL_DEPTH_TEST);
 
-	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
+	ns::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
 	
 	//Cube mesh
 	ew::Mesh cubeMesh(ew::createCube(0.5f));
@@ -75,6 +88,9 @@ int main() {
 		//Set uniforms
 		shader.use();
 
+		shader.setMat4("_View", camera.ViewMatrix());
+		shader.setMat4("_Projection", camera.ProjectionMatrix());
+
 		//TODO: Set model matrix uniform
 		for (size_t i = 0; i < NUM_CUBES; i++)
 		{
@@ -82,7 +98,7 @@ int main() {
 			shader.setMat4("_Model", cubeTransforms[i].getModelMatrix());
 			cubeMesh.draw();
 		}
-
+		
 		//Render UI
 		{
 			ImGui_ImplGlfw_NewFrame();
@@ -102,6 +118,17 @@ int main() {
 				ImGui::PopID();
 			}
 			ImGui::Text("Camera");
+			ImGui::DragFloat3("Position", &camera.position.x, 0.5f);
+			ImGui::DragFloat3("Target", &camera.target.x, 1.0f);
+			ImGui::Checkbox("Ortho", &camera.orthographic);
+			if (camera.orthographic == true) {
+				ImGui::DragFloat("Orhto Height", &camera.orthoSize, 1.0f);
+			} 
+			else {
+				ImGui::DragFloat("FOV", &camera.fov, 1.0f, 0.0f, 180.0f);
+			}
+			ImGui::DragFloat("Near Plane", &camera.nearPlane, 0.05f);
+			ImGui::DragFloat("Far Plane", &camera.farPlane, 1.0f);
 			ImGui::End();
 			
 			ImGui::Render();
