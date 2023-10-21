@@ -32,7 +32,7 @@ struct CameraControls {
 	float moveSpeed = 5.0f; //How fast to move with arrow keys (M/S)
 };
 
-void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls);
+void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls, float deltaTime);
 
 int main() {
 	printf("Initializing...");
@@ -79,9 +79,8 @@ int main() {
 		cubeTransforms[i].position.y = i / (NUM_CUBES / 2) - 0.5;
 	}
 	
+	//Camera
 	ns::Camera camera;
-	CameraControls cameraControls;
-
 	camera.position = ew::Vec3(0, 0, 5);
 	camera.target = ew::Vec3(0, 0, 0);
 	camera.fov = 60.0f;
@@ -91,28 +90,36 @@ int main() {
 	camera.orthographic = true;
 	camera.orthoSize = 6.0f;
 
-	//For storing the viewport data to access current width and height of screen
-	GLint viewportData[4];
+	CameraControls cameraControls;
 
+	GLint viewportData[4]; //For storing the viewport data to access current width and height of screen
+
+	float prevTime = 0; //Timestamp of previous frame
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-		moveCamera(window, &camera, &cameraControls);
+		//Calculate deltaTime
+		float time = (float)glfwGetTime(); //Timestamp of current frame
+		float deltaTime = time - prevTime;
+		prevTime = time;
+
+		//Pass deltaTime into moveCamera. Update this function to include a 4th parameter.
+		moveCamera(window, &camera, &cameraControls, deltaTime);
+
 		glClearColor(0.3f, 0.4f, 0.9f, 1.0f);
 		//Clear both color buffer AND depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//Gets viewport data
+		//Gets viewport data, returns four values: the x and y window coordinates of the viewport, followed by its width and height. 
 		glGetIntegerv(GL_VIEWPORT, viewportData);
-		//set camera aspect ratio to align with current viewport
+		//set camera aspect ratio to align with current viewport width and height
 		camera.aspectRatio = float(viewportData[2]) / float(viewportData[3]);
 
 		//Set uniforms
 		shader.use();
-
 		shader.setMat4("_View", camera.ViewMatrix());
 		shader.setMat4("_Projection", camera.ProjectionMatrix());
 
-		//TODO: Set model matrix uniform
+		//Set model matrix uniform
 		for (size_t i = 0; i < NUM_CUBES; i++)
 		{
 			//Construct model matrix
@@ -127,17 +134,21 @@ int main() {
 			ImGui::NewFrame();
 
 			ImGui::Begin("Settings");
+			//Cubes
 			ImGui::Text("Cubes");
-			for (size_t i = 0; i < NUM_CUBES; i++)
-			{
-				ImGui::PushID(i);
-				if (ImGui::CollapsingHeader("Transform")) {
-					ImGui::DragFloat3("Position", &cubeTransforms[i].position.x, 0.05f);
-					ImGui::DragFloat3("Rotation", &cubeTransforms[i].rotation.x, 1.0f);
-					ImGui::DragFloat3("Scale", &cubeTransforms[i].scale.x, 0.05f);
+			if (ImGui::CollapsingHeader("Transforms")) {
+				for (size_t i = 0; i < NUM_CUBES; i++)
+				{
+					ImGui::PushID(i);
+					if (ImGui::CollapsingHeader("Transform")) {
+						ImGui::DragFloat3("Position", &cubeTransforms[i].position.x, 0.05f);
+						ImGui::DragFloat3("Rotation", &cubeTransforms[i].rotation.x, 1.0f);
+						ImGui::DragFloat3("Scale", &cubeTransforms[i].scale.x, 0.05f);
+					}
+					ImGui::PopID();
 				}
-				ImGui::PopID();
 			}
+			//Camera
 			ImGui::Text("Camera");
 			ImGui::DragFloat3("Position", &camera.position.x, 0.5f);
 			ImGui::DragFloat3("Target", &camera.target.x, 1.0f);
@@ -150,6 +161,23 @@ int main() {
 			}
 			ImGui::DragFloat("Near Plane", &camera.nearPlane, 0.05f);
 			ImGui::DragFloat("Far Plane", &camera.farPlane, 1.0f);
+			//Camera Controller
+			ImGui::Text("Camera Controller");
+			ImGui::Text("Yaw:%f", cameraControls.yaw);
+			ImGui::Text("Pitch:%f", cameraControls.pitch);
+			ImGui::DragFloat("Move Speed", &cameraControls.moveSpeed, 0.5f);
+			//Reset Button
+			if (ImGui::Button("Reset", ImVec2(100, 0))) {
+				camera.position = ew::Vec3(0, 0, 5);
+				camera.target = ew::Vec3(0, 0, 0);
+				camera.fov = 60.0f;
+				camera.nearPlane = 0.1f;
+				camera.farPlane = 100.0f;
+				camera.orthoSize = 6.0f;
+				cameraControls.yaw = 0;
+				cameraControls.pitch = 0;
+				cameraControls.moveSpeed = 5.0f;
+			}
 			ImGui::End();
 			
 			ImGui::Render();
@@ -166,7 +194,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
-void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls)
+void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls, float deltaTime)
 {
 	//If right mouse is not held, release cursor and return early.
 	if (!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
@@ -214,29 +242,27 @@ void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls
 	);
 
 	//Camera vectors right and up are constructed using camera forward and world up (0,1,0). Graham-schmidt process!
-	ew::Vec3 right = ew::Normalize(ew::Cross(ew::Vec3(0, 1, 0), forward));
+	ew::Vec3 right = ew::Normalize(ew::Cross(forward, ew::Vec3(0, 1, 0)));
 	ew::Vec3 up = ew::Normalize(ew::Cross(forward, right));
 
-	//TODO: Keyboard controls for moving along forward, back, right, left, up, and down. See Requirements for key mappings.
-	//EXAMPLE: Moving along forward axis if W is held.
-	//Note that this is framerate dependent, and will be very fast until you scale by deltaTime. See the next section.
+	//Keyboard controls for moving along forward, back, right, left, up, and down. 
 	if (glfwGetKey(window, GLFW_KEY_W)) {
-		camera->position += forward * controls->moveSpeed;
+		camera->position += forward * controls->moveSpeed * deltaTime; //Forward
 	}
 	if (glfwGetKey(window, GLFW_KEY_S)) {
-		camera->position -= forward * controls->moveSpeed;
-	}
-	if (glfwGetKey(window, GLFW_KEY_A)) {
-		camera->position += right * controls->moveSpeed;
+		camera->position -= forward * controls->moveSpeed * deltaTime; //Back
 	}
 	if (glfwGetKey(window, GLFW_KEY_D)) {
-		camera->position -= right * controls->moveSpeed;
+		camera->position += right * controls->moveSpeed * deltaTime;   //Right
+	}
+	if (glfwGetKey(window, GLFW_KEY_A)) {
+		camera->position -= right * controls->moveSpeed * deltaTime;   //Left
 	}
 	if (glfwGetKey(window, GLFW_KEY_E)) {
-		camera->position += up * controls->moveSpeed;
+		camera->position += up * controls->moveSpeed * deltaTime;      //Up
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q)) {
-		camera->position -= up * controls->moveSpeed;
+		camera->position -= up * controls->moveSpeed * deltaTime;     //Down
 	}
 
 	//By setting target to a point in front of the camera along its forward direction, our LookAt will be updated accordingly when rendering.
