@@ -190,13 +190,13 @@ void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls
 		controls->prevMouseY = mouseY;
 	}
 
-	//TODO: Get mouse position delta for this frame
+	//Get mouse position delta for this frame
 	float mouseDeltaX = (mouseX - controls->prevMouseX);
 	float mouseDeltaY = (mouseY - controls->prevMouseY);
-	//TODO: Add to yaw and pitch
+	//Add to yaw and pitch
 	controls->yaw += mouseDeltaX * controls->mouseSensitivity;
 	controls->pitch -= mouseDeltaY * controls->mouseSensitivity;
-	//TODO: Clamp pitch between -89 and 89 degrees
+	//Clamp pitch between -89 and 89 degrees
 	if (controls->pitch > 89.0f)
 		controls->pitch = 89.0f;
 	if (controls->pitch < -89.0f)
@@ -206,8 +206,40 @@ void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls
 	controls->prevMouseX = mouseX;
 	controls->prevMouseY = mouseY;
 
-	//Construct forward vector using yaw and pitch. Convert to radians!
-	ew::Vec3 forward = ew::Vec3( sin(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)), sin(ew::Radians(controls->pitch)), -cos(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)) );
+	//Constructs forward vector using yaw and pitch. Convert to radians!
+	ew::Vec3 forward = ew::Vec3( 
+		sin(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)), 
+		sin(ew::Radians(controls->pitch)), 
+		-cos(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)) 
+	);
+
+	//Camera vectors right and up are constructed using camera forward and world up (0,1,0). Graham-schmidt process!
+	ew::Vec3 right = ew::Normalize(ew::Cross(ew::Vec3(0, 1, 0), forward));
+	ew::Vec3 up = ew::Normalize(ew::Cross(forward, right));
+
+	//TODO: Keyboard controls for moving along forward, back, right, left, up, and down. See Requirements for key mappings.
+	//EXAMPLE: Moving along forward axis if W is held.
+	//Note that this is framerate dependent, and will be very fast until you scale by deltaTime. See the next section.
+	if (glfwGetKey(window, GLFW_KEY_W)) {
+		camera->position += forward * controls->moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_S)) {
+		camera->position -= forward * controls->moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_A)) {
+		camera->position += right * controls->moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_D)) {
+		camera->position -= right * controls->moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_E)) {
+		camera->position += up * controls->moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_Q)) {
+		camera->position -= up * controls->moveSpeed;
+	}
+
 	//By setting target to a point in front of the camera along its forward direction, our LookAt will be updated accordingly when rendering.
+	//Setting camera.target should be done after changing position.
 	camera->target = camera->position + forward;
 }
