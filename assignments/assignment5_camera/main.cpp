@@ -23,16 +23,16 @@ const int SCREEN_HEIGHT = 720;
 const int NUM_CUBES = 4;
 ns::Transform cubeTransforms[NUM_CUBES];
 
-ns::Camera camera {
-	ew::Vec3(0,0,5), 
-	ew::Vec3(0,0,0),
-	60.0f,
-	(float(SCREEN_WIDTH)/float(SCREEN_HEIGHT)),
-	0.1f,
-	100.0f,
-	true,
-	6.0f
+//Camera aiming related variables
+struct CameraControls {
+	double prevMouseX, prevMouseY; //Mouse position from previous frame
+	float yaw = 0, pitch = 0; //Degrees
+	float mouseSensitivity = 0.1f; //How fast to turn with mouse
+	bool firstMouse = true; //Flag to store initial mouse position
+	float moveSpeed = 5.0f; //How fast to move with arrow keys (M/S)
 };
+
+void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls);
 
 int main() {
 	printf("Initializing...");
@@ -78,12 +78,25 @@ int main() {
 		cubeTransforms[i].position.x = i % (NUM_CUBES / 2) - 0.5;
 		cubeTransforms[i].position.y = i / (NUM_CUBES / 2) - 0.5;
 	}
+	
+	ns::Camera camera;
+	CameraControls cameraControls;
+
+	camera.position = ew::Vec3(0, 0, 5);
+	camera.target = ew::Vec3(0, 0, 0);
+	camera.fov = 60.0f;
+	camera.aspectRatio = (float(SCREEN_WIDTH) / float(SCREEN_HEIGHT));
+	camera.nearPlane = 0.1f;
+	camera.farPlane = 100.0f;
+	camera.orthographic = true;
+	camera.orthoSize = 6.0f;
 
 	//For storing the viewport data to access current width and height of screen
 	GLint viewportData[4];
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		moveCamera(window, &camera, &cameraControls);
 		glClearColor(0.3f, 0.4f, 0.9f, 1.0f);
 		//Clear both color buffer AND depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -153,3 +166,48 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
+void moveCamera(GLFWwindow* window, ns::Camera* camera, CameraControls* controls)
+{
+	//If right mouse is not held, release cursor and return early.
+	if (!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
+		//Release cursor
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		controls->firstMouse = true;
+		return;
+	}
+	//GLFW_CURSOR_DISABLED hides the cursor, but the position will still be changed as we move our mouse.
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	//Get screen mouse position this frame
+	double mouseX, mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+
+	//If we just started right clicking, set prevMouse values to current position.
+	//This prevents a bug where the camera moves as soon as we click.
+	if (controls->firstMouse) {
+		controls->firstMouse = false;
+		controls->prevMouseX = mouseX;
+		controls->prevMouseY = mouseY;
+	}
+
+	//TODO: Get mouse position delta for this frame
+	float mouseDeltaX = (mouseX - controls->prevMouseX);
+	float mouseDeltaY = (mouseY - controls->prevMouseY);
+	//TODO: Add to yaw and pitch
+	controls->yaw += mouseDeltaX * controls->mouseSensitivity;
+	controls->pitch -= mouseDeltaY * controls->mouseSensitivity;
+	//TODO: Clamp pitch between -89 and 89 degrees
+	if (controls->pitch > 89.0f)
+		controls->pitch = 89.0f;
+	if (controls->pitch < -89.0f)
+		controls->pitch = -89.0f;
+
+	//Remember previous mouse position
+	controls->prevMouseX = mouseX;
+	controls->prevMouseY = mouseY;
+
+	//Construct forward vector using yaw and pitch. Convert to radians!
+	ew::Vec3 forward = ew::Vec3( sin(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)), sin(ew::Radians(controls->pitch)), -cos(ew::Radians(controls->yaw)) * cos(ew::Radians(controls->pitch)) );
+	//By setting target to a point in front of the camera along its forward direction, our LookAt will be updated accordingly when rendering.
+	camera->target = camera->position + forward;
+}
