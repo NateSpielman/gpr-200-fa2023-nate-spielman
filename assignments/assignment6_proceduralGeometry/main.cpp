@@ -15,6 +15,8 @@
 #include <ew/camera.h>
 #include <ew/cameraController.h>
 
+#include <ns/procGen.h>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
 
@@ -85,6 +87,10 @@ int main() {
 	//Initialize transforms
 	ew::Transform cubeTransform;
 
+	ew::MeshData planeMeshData = ns::createPlane(2.0f, 2.0f, 5);
+	ew::Mesh planeMesh(planeMeshData);
+	ew::Transform planeTransform;
+
 	resetCamera(camera,cameraController);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -118,8 +124,12 @@ int main() {
 		shader.setVec3("_LightDir", lightF);
 
 		//Draw cube
-		shader.setMat4("_Model", cubeTransform.getModelMatrix());
-		cubeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+		//shader.setMat4("_Model", cubeTransform.getModelMatrix());
+		//cubeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+
+		//Draw plane
+		shader.setMat4("_Model", planeTransform.getModelMatrix());
+		planeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Render UI
 		{
