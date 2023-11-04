@@ -12,7 +12,7 @@ namespace ns {
 		ew::MeshData mesh;
 		mesh.vertices.reserve((numSegments + 1) * 2);
 
-		//Vertices
+	//Vertices
 		float topY = height / 2.0f;
 		float bottomY = -topY;
 		float thetaStep = (ew::PI * 2.0f) / (float)numSegments;
@@ -102,6 +102,40 @@ namespace ns {
 		bottomVertex.normal = ew::Vec3(0.0f, -1.0f, 0.0f);
 		bottomVertex.uv = ew::Vec2(0.5f, 0.5f);
 		mesh.vertices.push_back(bottomVertex);
+
+	//Indices
+		//Top Ring
+		int start = 1;
+		int center = 0;
+		for (int i = 0; i <= numSegments; i++) {
+			mesh.indices.push_back(start + i);
+			mesh.indices.push_back(center);
+			mesh.indices.push_back(start + i + 1);
+		}
+
+		//Sides
+		int sideStart = numSegments + 1;
+		int columns = numSegments + 1;
+		for (int i = 0; i < columns; i++) {
+			start = sideStart + i;
+			//Triangle 1
+			mesh.indices.push_back(start);
+			mesh.indices.push_back(start + 1);
+			mesh.indices.push_back(start + columns);
+			//Triangle 2
+			mesh.indices.push_back(start + 1);
+			mesh.indices.push_back(start + columns + 1);
+			mesh.indices.push_back(start + columns);
+		}
+
+		//Bottom Ring
+		start = (numSegments * 3) + 1;
+		center = mesh.vertices.size() - 1;
+		for (int i = 0; i <= numSegments; i++) {
+			mesh.indices.push_back(start + i);
+			mesh.indices.push_back(center);
+			mesh.indices.push_back(start + i + 1);
+		}
 
 		return mesh;
 	}
