@@ -191,8 +191,8 @@ namespace ns {
 		}
 
 		//Bottom Ring
-		start = (numSegments * 3) + 1;
 		center = mesh.vertices.size() - 1;
+		start = center - (numSegments + 1);
 		for (int i = 0; i <= numSegments; i++) {
 			mesh.indices.push_back(start + i);
 			mesh.indices.push_back(center);

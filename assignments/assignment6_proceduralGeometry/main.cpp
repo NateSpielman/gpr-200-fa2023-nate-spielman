@@ -84,29 +84,29 @@ int main() {
 	ew::MeshData cubeMeshData = ew::createCube(0.5f);
 	ew::Mesh cubeMesh(cubeMeshData);
 
+	//Create Plane
+	ew::MeshData planeMeshData = ns::createPlane(0.5f, 0.5f, 10);
+	ew::Mesh planeMesh(planeMeshData);
+
+	//Create Cylinder
+	ew::MeshData cylinderMeshData = ns::createCylinder(0.5f, 0.25f, 16);
+	ew::Mesh cylinderMesh(cylinderMeshData);
+
+	//Create Sphere
+	ew::MeshData sphereMeshData = ns::createSphere(0.25f, 16);
+	ew::Mesh sphereMesh(sphereMeshData);
+
 	//Initialize transforms
 	ew::Transform cubeTransform;
 
-	//Create Plane
-	ew::MeshData planeMeshData = ns::createPlane(2.0f, 2.0f, 5);
-	ew::Mesh planeMesh(planeMeshData);
-
-	//Initialize Plane transforms
 	ew::Transform planeTransform;
+	planeTransform.position = ew::Vec3(0.5f, -0.25f, 0.25f);
 
-	//Create Cylinder
-	ew::MeshData cylinderMeshData = ns::createCylinder(3.0f, 1.0f, 8);
-	ew::Mesh cylinderMesh(cylinderMeshData);
-
-	//Initialize Cylinder transforms
 	ew::Transform cylinderTransform;
+	cylinderTransform.position = ew::Vec3(1.5f, 0.0f, 0.0f);
 
-	//Create Sphere
-	ew::MeshData sphereMeshData = ns::createSphere(1.0f, 10);
-	ew::Mesh sphereMesh(sphereMeshData);
-
-	//Initialize Sphere transforms
 	ew::Transform sphereTransform;
+	sphereTransform.position = ew::Vec3(2.25f, 0.0f, 0.0f);
 
 	resetCamera(camera,cameraController);
 
@@ -141,16 +141,16 @@ int main() {
 		shader.setVec3("_LightDir", lightF);
 
 		//Draw cube
-		//shader.setMat4("_Model", cubeTransform.getModelMatrix());
-		//cubeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+		shader.setMat4("_Model", cubeTransform.getModelMatrix());
+		cubeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Draw plane
-		//shader.setMat4("_Model", planeTransform.getModelMatrix());
-		//planeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+		shader.setMat4("_Model", planeTransform.getModelMatrix());
+		planeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Draw Cylinder
-		//shader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		//cylinderMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+		shader.setMat4("_Model", cylinderTransform.getModelMatrix());
+		cylinderMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
