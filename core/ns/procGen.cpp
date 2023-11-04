@@ -6,7 +6,7 @@ namespace ns {
 	{
 		ew::MeshData mesh;
 		
-		//Verticies
+	//Verticies
 		float thetaStep = (ew::PI * 2.0f) / (float)numSegments;
 		float phiStep = ew::PI / (float)numSegments;
 		float theta;
@@ -28,6 +28,41 @@ namespace ns {
 				vertex.uv.y = (float)row / (float)numSegments;
 
 				mesh.vertices.push_back(vertex);
+			}
+		}
+
+	//Indices 
+		//Top Cap
+		int poleStart = 0;
+		int sideStart = numSegments + 1;
+		for (int i = 0; i < numSegments; i++) {
+			mesh.indices.push_back(sideStart + i);
+			mesh.indices.push_back(poleStart + i);
+			mesh.indices.push_back(sideStart + i + 1);
+		}
+
+		//Bottom Cap
+		poleStart = numSegments * (numSegments + 1);
+		sideStart = poleStart - (numSegments + 1);
+		for (int i = 0; i < numSegments; i++) {
+			mesh.indices.push_back(sideStart + i);
+			mesh.indices.push_back(poleStart + i + 1);
+			mesh.indices.push_back(sideStart + i + 1);
+		}
+
+		//Rows
+		int columns = numSegments + 1;
+		for (int row = 1; row < numSegments - 1; row++) {
+			for (int col = 0; col < numSegments; col++) {
+				int start = row * columns + col;
+				//Triangle 1
+				mesh.indices.push_back(start);
+				mesh.indices.push_back(start + 1);
+				mesh.indices.push_back(start + columns);
+				//Triangle 2
+				mesh.indices.push_back(start + 1);
+				mesh.indices.push_back(start + columns + 1);
+				mesh.indices.push_back(start + columns);
 			}
 		}
 
