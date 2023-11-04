@@ -1,12 +1,39 @@
 #include "procGen.h"
 
 namespace ns {
-	/*
+	
 	ew::MeshData createSphere(float radius, int numSegments)
 	{
+		ew::MeshData mesh;
 		
+		//Verticies
+		float thetaStep = (ew::PI * 2.0f) / (float)numSegments;
+		float phiStep = ew::PI / (float)numSegments;
+		float theta;
+		float phi;
+		
+		for (int row = 0; row <= numSegments; row++) {
+			phi = (float)row * phiStep;
+			for (int col = 0; col <= numSegments; col++) {
+				ew::Vertex vertex;
+				theta = (float)col * thetaStep;
+				
+				vertex.pos.x = radius * cos(theta) * sin(phi);
+				vertex.pos.y = radius * cos(phi);
+				vertex.pos.z = radius * sin(theta) * sin(phi);
+
+				vertex.normal = ew::Normalize(vertex.pos);
+
+				vertex.uv.x = (float)col / (float)numSegments;
+				vertex.uv.y = (float)row / (float)numSegments;
+
+				mesh.vertices.push_back(vertex);
+			}
+		}
+
+		return mesh;
 	}
-	*/
+	
 	ew::MeshData createCylinder(float height, float radius, int numSegments)
 	{
 		ew::MeshData mesh;
@@ -36,8 +63,8 @@ namespace ns {
 
 			vertex.normal = ew::Vec3(0.0f, 1.0f, 0.0f);
 
-			vertex.uv.x = (cos(theta) + 1) * 0.5;
-			vertex.uv.y = (sin(theta) + 1) * 0.5;
+			vertex.uv.x = (cos(theta) + 1) * 0.5f;
+			vertex.uv.y = (sin(theta) + 1) * 0.5f;
 
 			mesh.vertices.push_back(vertex);
 		}
@@ -54,7 +81,7 @@ namespace ns {
 
 			vertex.normal = ew::Normalize(ew::Vec3(cos(theta), 0.0f, sin(theta)));
 
-			vertex.uv.x = (cos(theta) + 1) * 0.5;
+			vertex.uv.x = (cos(theta) + 1) * 0.5f;
 			vertex.uv.y = 1;
 
 			mesh.vertices.push_back(vertex);
@@ -72,7 +99,7 @@ namespace ns {
 
 			vertex.normal = ew::Normalize(ew::Vec3(cos(theta), 0.0f, sin(theta)));
 
-			vertex.uv.x = (cos(theta) + 1) * 0.5;
+			vertex.uv.x = (cos(theta) + 1) * 0.5f;
 			vertex.uv.y = 0;
 
 			mesh.vertices.push_back(vertex);
@@ -90,8 +117,8 @@ namespace ns {
 
 			vertex.normal = ew::Vec3(0.0f, -1.0f, 0.0f);
 
-			vertex.uv.x = (cos(theta) + 1) * 0.5;
-			vertex.uv.y = (sin(theta) + 1) * 0.5;
+			vertex.uv.x = (cos(theta) + 1) * 0.5f;
+			vertex.uv.y = (sin(theta) + 1) * 0.5f;
 
 			mesh.vertices.push_back(vertex);
 		}

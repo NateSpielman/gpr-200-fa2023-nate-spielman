@@ -101,6 +101,13 @@ int main() {
 	//Initialize Cylinder transforms
 	ew::Transform cylinderTransform;
 
+	//Create Sphere
+	ew::MeshData sphereMeshData = ns::createSphere(1.0f, 10);
+	ew::Mesh sphereMesh(sphereMeshData);
+
+	//Initialize Sphere transforms
+	ew::Transform sphereTransform;
+
 	resetCamera(camera,cameraController);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -142,9 +149,12 @@ int main() {
 		//planeMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Draw Cylinder
-		shader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		cylinderMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+		//shader.setMat4("_Model", cylinderTransform.getModelMatrix());
+		//cylinderMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
+		//Draw Sphere
+		shader.setMat4("_Model", sphereTransform.getModelMatrix());
+		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		//Render UI
 		{
