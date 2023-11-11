@@ -7,19 +7,31 @@ in Surface{
 	vec3 WorldNormal; //Per-fragment interpolated world normal
 }fs_in;
 
-uniform sampler2D _Texture;
-
 struct Light
 {
 	vec3 position;
 	vec3 color;
 };
-#define MAX_LIGHTS 1
-uniform Light _Lights[MAX_LIGHTS];
+
+struct Material {
+	float ambientK; 
+	float diffuseK; 
+	float specular; 
+	float shininess;
+};
+
+//#define MAX_LIGHTS 1
+//uniform Light _Lights[MAX_LIGHTS];
+uniform Light _Light;
+uniform Material _Mat;
+uniform sampler2D _Texture;
 
 void main(){
-	FragColor = texture(_Texture,fs_in.UV);
 	vec3 normal = normalize(fs_in.WorldNormal);
-	//TODO: Lighting calculations using corrected normal
-	vec3 color = _Lights[0].color; 
+	
+	//Diffuse
+	vec3 w = normalize(_Light.position - fs_in.WorldPosition);
+	vec3 color = _Mat.diffuseK * _Light.color * max(dot(normal, w),0);
+	
+	FragColor = vec4(color, 1.0) * texture(_Texture,fs_in.UV);
 }

@@ -88,6 +88,18 @@ int main() {
 	sphereTransform.position = ew::Vec3(-1.5f, 0.0f, 0.0f);
 	cylinderTransform.position = ew::Vec3(1.5f, 0.0f, 0.0f);
 
+	//Initialize Lights
+	Light light;
+	light.position = ew::Vec3(0.0f, 1.0f, 0.0f);
+	light.color = ew::Vec3(1.0f, 1.0f, 1.0f);
+
+	//Set Material Values
+	Material mat;
+	mat.diffuseK = 0.4;
+	mat.specular = 0.4;
+	mat.ambientK = 0.4;
+	mat.shininess = 1.0;
+
 	resetCamera(camera,cameraController);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -124,6 +136,9 @@ int main() {
 		cylinderMesh.draw();
 
 		//TODO: Render point lights
+		shader.setFloat("_Material.diffuseK", mat.diffuseK);
+		shader.setVec3("_Light.position", light.position);
+		shader.setVec3("_Light.color", light.color);
 
 		//Render UI
 		{
@@ -152,6 +167,10 @@ int main() {
 			}
 
 			ImGui::ColorEdit3("BG color", &bgColor.x);
+
+			ImGui::DragFloat3("Light Position", &light.position.x, 0.1f);
+			ImGui::DragFloat3("Light Color", &light.color.x, 0.1f);
+
 			ImGui::End();
 			
 			ImGui::Render();
