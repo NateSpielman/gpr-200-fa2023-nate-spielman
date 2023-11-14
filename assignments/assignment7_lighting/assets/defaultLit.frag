@@ -23,7 +23,7 @@ struct Material {
 //#define MAX_LIGHTS 1
 //uniform Light _Lights[MAX_LIGHTS];
 uniform Light _Light;
-uniform Material _Mat;
+uniform Material _Material;
 uniform sampler2D _Texture;
 
 void main(){
@@ -31,7 +31,7 @@ void main(){
 	
 	//Diffuse
 	vec3 w = normalize(_Light.position - fs_in.WorldPosition);
-	vec3 color = _Mat.diffuseK * _Light.color * max(dot(normal, w),0);
+	vec3 color = _Light.color * (_Material.diffuseK * max(dot(normal, w), 0));
 	
 	FragColor = vec4(color, 1.0) * texture(_Texture,fs_in.UV);
 }

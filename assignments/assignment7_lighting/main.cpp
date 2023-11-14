@@ -137,6 +137,10 @@ int main() {
 
 		//TODO: Render point lights
 		shader.setFloat("_Material.diffuseK", mat.diffuseK);
+		shader.setFloat("_Material.specular", mat.specular);
+		shader.setFloat("_Material.ambientK", mat.ambientK);
+		shader.setFloat("_Material.shininess", mat.shininess);
+
 		shader.setVec3("_Light.position", light.position);
 		shader.setVec3("_Light.color", light.color);
 
