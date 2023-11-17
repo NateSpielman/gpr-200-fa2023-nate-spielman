@@ -98,7 +98,7 @@ int main() {
 	mat.diffuseK = 0.4;
 	mat.specular = 0.4;
 	mat.ambientK = 0.4;
-	mat.shininess = 1.0;
+	mat.shininess = 8.0;
 
 	resetCamera(camera,cameraController);
 
@@ -136,6 +136,8 @@ int main() {
 		cylinderMesh.draw();
 
 		//TODO: Render point lights
+		shader.setVec3("_CamPos", camera.position);
+
 		shader.setFloat("_Material.diffuseK", mat.diffuseK);
 		shader.setFloat("_Material.specular", mat.specular);
 		shader.setFloat("_Material.ambientK", mat.ambientK);
