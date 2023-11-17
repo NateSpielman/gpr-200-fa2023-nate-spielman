@@ -30,17 +30,18 @@ uniform sampler2D _Texture;
 void main(){
 	vec3 normal = normalize(fs_in.WorldNormal);
 	vec4 newTexture =  texture(_Texture,fs_in.UV);
-	
+
+	//Ambient
+	vec3 lightColor = _Material.ambientK * _Light.color;
+
 	//Diffuse
 	vec3 w = normalize(_Light.position - fs_in.WorldPosition);
+	lightColor += _Light.color * _Material.diffuseK * max(dot(normal, w), 0);
 
 	//Specular 
 	vec3 v = normalize(_CamPos - fs_in.WorldPosition);
 	vec3 h = normalize(w + v);
-
-	//Ligth Calculations
-	vec3 color = _Light.color * (_Material.diffuseK * max(dot(normal, w), 0));
-	color += _Light.color * (_Material.specular * pow(max(dot(h,normal),0),_Material.shininess));
+	lightColor += _Light.color * _Material.specular * pow(max(dot(h,normal),0),_Material.shininess);
 	
-	FragColor = vec4(newTexture.rgb * color, 1.0f);
+	FragColor = vec4(newTexture.rgb * lightColor, 1.0f);
 }
