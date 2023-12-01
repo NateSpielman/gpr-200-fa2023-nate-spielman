@@ -15,13 +15,15 @@
 #include <ew/camera.h>
 #include <ew/cameraController.h>
 
+using namespace std;
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
 
 int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
 
-const int MAX_LIGHTS = 4;
+const int MAX_LIGHTS = 4, LIGHT_TYPES = 4;
 int numLights = 4;
 
 float prevTime;
@@ -33,6 +35,8 @@ ew::CameraController cameraController;
 struct Light {
 	ew::Vec3 position; //World space
 	ew::Vec3 color; //RGB
+	int lightType = -1;
+	float radius = 0, penumbra = 0, umbra = 0;
 };
 
 struct Material {
@@ -166,17 +170,12 @@ int main() {
 		shader.setFloat("_Material.ambientK", mat.ambientK);
 		shader.setFloat("_Material.shininess", mat.shininess);
 
-		shader.setVec3("_Lights[0].position", lights[0].position);
-		shader.setVec3("_Lights[0].color", lights[0].color);
-
-		shader.setVec3("_Lights[1].position", lights[1].position);
-		shader.setVec3("_Lights[1].color", lights[1].color);
-
-		shader.setVec3("_Lights[2].position", lights[2].position);
-		shader.setVec3("_Lights[2].color", lights[2].color);
-
-		shader.setVec3("_Lights[3].position", lights[3].position);
-		shader.setVec3("_Lights[3].color", lights[3].color);
+		// UPDATED LIGHT COLOR AND POSITION CODE - JERRY KAUFMAN
+		for (int i = 0; i < numLights; i++) {
+			shader.setVec3("_Lights[" + to_string(i) + "].position", lightTransforms[i].position);
+			shader.setVec3("_Lights[" + to_string(i) + "].color", lights[i].color);
+			shader.setInt("_Lights[" + to_string(i) + "].lightType", -1);
+		}
 
 		unlitShader.use();
 		unlitShader.setMat4("_ViewProjection", camera.ProjectionMatrix() * camera.ViewMatrix());
@@ -226,25 +225,15 @@ int main() {
 
 			ImGui::DragInt("Number of Lights", &numLights, 1.0f, 1, MAX_LIGHTS);
 
-			if (ImGui::CollapsingHeader("Light 1"))
-			{
-				ImGui::DragFloat3("Light Position", &lightTransforms[0].position.x, 0.1f);
-				ImGui::DragFloat3("Light Color", &lights[0].color.x, 0.05f);
-			}
-			if (ImGui::CollapsingHeader("Light 2"))
-			{
-				ImGui::DragFloat3("Light Position", &lightTransforms[1].position.x, 0.1f);
-				ImGui::DragFloat3("Light Color", &lights[1].color.x, 0.05f);
-			}
-			if (ImGui::CollapsingHeader("Light 3"))
-			{
-				ImGui::DragFloat3("Light Position", &lightTransforms[2].position.x, 0.1f);
-				ImGui::DragFloat3("Light Color", &lights[2].color.x, 0.05f);
-			}
-			if (ImGui::CollapsingHeader("Light 4"))
-			{
-				ImGui::DragFloat3("Light Position", &lightTransforms[3].position.x, 0.1f);
-				ImGui::DragFloat3("Light Color", &lights[3].color.x, 0.05f);
+			// UPDATED GUI WITH A FOR LOOP - JERRY KAUFMAN
+			for (int i = 0; i < numLights; i++) {
+				ImGui::PushID(i);
+				if (ImGui::CollapsingHeader("Lights")) {
+					ImGui::DragFloat3("Position", &lightTransforms[i].position.x, 0.1f);
+					ImGui::ColorEdit3("Color", &lights[i].color.x, 0.1f);
+					ImGui::DragInt("Light Type", &lights[i].lightType, 1.0f, -1, 3);
+				}
+				ImGui::PopID();
 			}
 
 			ImGui::End();
