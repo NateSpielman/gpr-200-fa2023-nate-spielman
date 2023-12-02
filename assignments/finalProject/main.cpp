@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <vector>
 
 #include <ew/external/glad.h>
 #include <ew/ewMath/ewMath.h>
@@ -15,7 +16,7 @@
 #include <ew/camera.h>
 #include <ew/cameraController.h>
 
-using namespace std;
+#include <gjn/cubemap.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
@@ -31,6 +32,60 @@ ew::Vec3 bgColor = ew::Vec3(0.1f);
 
 ew::Camera camera;
 ew::CameraController cameraController;
+
+std::vector<std::string> cubemapFaces {
+	"right.jpg",
+	"left.jpg",
+	"top.jpg",
+	"bottom.jpg",
+	"back.jpg",
+	"front.jpg"
+};
+
+float skyboxVertices[] {
+	// positions          
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+};
 
 struct Light {
 	ew::Vec3 position; //World space
@@ -79,9 +134,11 @@ int main() {
 
 	ew::Shader shader("assets/defaultLit.vert", "assets/defaultLit.frag");
 	ew::Shader unlitShader("assets/unlit.vert", "assets/unlit.frag");
+	ew::Shader skyboxShader("assets/skybox.vert", "assets/skybox.frag");
+	unsigned int cubemapTexture = gjn::loadCubemap(cubemapFaces);
 	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg",GL_REPEAT,GL_LINEAR);
 
-	//Create cube
+	//Create meshes
 	ew::Mesh cubeMesh(ew::createCube(1.0f));
 	ew::Mesh planeMesh(ew::createPlane(5.0f, 5.0f, 10));
 	ew::Mesh sphereMesh(ew::createSphere(0.5f, 64));
@@ -125,6 +182,22 @@ int main() {
 	mat.specular = 0.4;
 	mat.ambientK = 0.2;
 	mat.shininess = 8.0;
+
+	glEnable(GL_DEPTH_TEST);
+
+	//Skybox VAO + VBO
+	unsigned int skyboxVAO, skyboxVBO;
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	//Skybox shader config
+	skyboxShader.use();
+	skyboxShader.setInt("_Skybox", 0);
 
 	resetCamera(camera,cameraController);
 
@@ -172,9 +245,9 @@ int main() {
 
 		// UPDATED LIGHT COLOR AND POSITION CODE - JERRY KAUFMAN
 		for (int i = 0; i < numLights; i++) {
-			shader.setVec3("_Lights[" + to_string(i) + "].position", lightTransforms[i].position);
-			shader.setVec3("_Lights[" + to_string(i) + "].color", lights[i].color);
-			shader.setInt("_Lights[" + to_string(i) + "].lightType", -1);
+			shader.setVec3("_Lights[" + std::to_string(i) + "].position", lightTransforms[i].position);
+			shader.setVec3("_Lights[" + std::to_string(i) + "].color", lights[i].color);
+			shader.setInt("_Lights[" + std::to_string(i) + "].lightType", -1);
 		}
 
 		unlitShader.use();
@@ -186,6 +259,18 @@ int main() {
 			unlitShader.setVec3("_Color", lights[i].color);
 			sphereMesh.draw();
 		}
+
+		//Skybox
+		glDepthMask(GL_LEQUAL);
+		skyboxShader.use();
+		skyboxShader.setMat4("_Projection", camera.ProjectionMatrix());
+		skyboxShader.setMat4("_View", camera.ViewMatrix());
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthMask(GL_LESS);
 
 		//Render UI
 		{
