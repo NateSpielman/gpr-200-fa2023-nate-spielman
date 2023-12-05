@@ -88,10 +88,9 @@ float skyboxVertices[] {
 };
 
 struct Light {
-	ew::Vec3 position; //World space
-	ew::Vec3 color; //RGB
+	ew::Vec3 position, color, direction;
 	int lightType = -1;
-	float radius = 0, penumbra = 0, umbra = 0;
+	float radius = 5, penumbra = 1, umbra = 0;
 };
 
 struct Material {
@@ -247,7 +246,12 @@ int main() {
 		for (int i = 0; i < numLights; i++) {
 			shader.setVec3("_Lights[" + std::to_string(i) + "].position", lightTransforms[i].position);
 			shader.setVec3("_Lights[" + std::to_string(i) + "].color", lights[i].color);
-			shader.setInt("_Lights[" + std::to_string(i) + "].lightType", -1);
+			shader.setVec3("_Lights[" + std::to_string(i) + "].direction", lights[i].direction);
+			shader.setInt("_Lights[" + std::to_string(i) + "].lightType", lights[i].lightType);
+			shader.setFloat("_Lights[" + std::to_string(i) + "].radius", lights[i].radius);
+			shader.setFloat("_Lights[" + std::to_string(i) + "].penumbra", lights[i].penumbra);
+			shader.setFloat("_Lights[" + std::to_string(i) + "].umbra", lights[i].umbra);
+
 		}
 
 		unlitShader.use();
@@ -316,7 +320,14 @@ int main() {
 				if (ImGui::CollapsingHeader("Lights")) {
 					ImGui::DragFloat3("Position", &lightTransforms[i].position.x, 0.1f);
 					ImGui::ColorEdit3("Color", &lights[i].color.x, 0.1f);
-					ImGui::DragInt("Light Type", &lights[i].lightType, 1.0f, -1, 3);
+					ImGui::DragInt("Light Type", &lights[i].lightType, 1.0f, -1, 2);
+					if (lights[i].lightType == 0) {
+						ImGui::DragFloat("Radius", &lights[i].radius, 1.0f, 0, 100);
+					}
+					else if (lights[i].lightType == 2) {
+						ImGui::DragFloat("Penumbra", &lights[i].penumbra, 1.0f, 1, 100);
+						ImGui::DragFloat("Umbra", &lights[i].umbra, 1.0f, 0, 100);
+					}
 				}
 				ImGui::PopID();
 			}
