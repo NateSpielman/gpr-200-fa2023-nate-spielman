@@ -25,7 +25,7 @@ int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
 
 const int MAX_LIGHTS = 4, LIGHT_TYPES = 4;
-int numLights = 4;
+int numLights = 1;
 
 float prevTime;
 ew::Vec3 bgColor = ew::Vec3(0.1f);
@@ -90,7 +90,7 @@ float skyboxVertices[] {
 struct Light {
 	ew::Vec3 position, color, direction;
 	int lightType = -1;
-	float radius = 5, penumbra = 1, umbra = 0;
+	float radius = 5, penumbra = 5, umbra = 30;
 };
 
 struct Material {
@@ -172,6 +172,7 @@ int main() {
 	for (int i = 0; i < MAX_LIGHTS; i++)
 	{
 		lightTransforms[i].position = lights[i].position;
+		lightTransforms[i].direction = lights[i].direction;
 		lightTransforms[i].scale = ew::Vec3(0.5f);
 	}
 
@@ -323,6 +324,9 @@ int main() {
 					ImGui::DragInt("Light Type", &lights[i].lightType, 1.0f, -1, 2);
 					if (lights[i].lightType == 0) {
 						ImGui::DragFloat("Radius", &lights[i].radius, 1.0f, 0, 100);
+					}
+					else if (lights[i].lightType == 1) {
+						ImGui::DragFloat3("Direction", &lightTransforms[i].direction.x, 0.1f);
 					}
 					else if (lights[i].lightType == 2) {
 						ImGui::DragFloat("Penumbra", &lights[i].penumbra, 1.0f, 1, 100);

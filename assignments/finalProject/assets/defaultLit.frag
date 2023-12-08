@@ -49,33 +49,37 @@ void main(){
 	float lightIntensity = 1.0f;
 
 	for(int i = 0; i < _NumLights; i++) {
-		vec3 direction, lightColor;
+		vec3 lightColor, w;
 		float lightDistance;
 
 		switch (_Lights[i].lightType) {
 			 // POINT LIGHT
 			 case 0: 
-				direction = normalize(_Lights[i].position - fs_in.WorldPosition);
+				w = normalize(_Lights[i].position - fs_in.WorldPosition);
 				lightDistance = length(_Lights[i].position - fs_in.WorldPosition);
 
 				lightIntensity = calculateWindowed(lightDistance, _Lights[i].radius, 2);
 				break;
 			// DIRECTIONAL
 			case 1:
-				direction = normalize(-_Lights[i].position);
+				w = -_Lights[i].direction;
 				break;
 			// SPOTLIGHT
 			case 2:
-				direction = normalize(_Lights[i].position - fs_in.WorldPosition);
+				w = normalize(_Lights[i].position - fs_in.WorldPosition);
 				lightDistance = length(_Lights[i].position - fs_in.WorldPosition);
 
-				float spotEffect, cutoff, outerCutoff, attenuation;
+				float theta = dot(w, normalize(_Lights[i].direction));
+				float epsilon = (_Lights[i].penumbra - _Lights[i].umbra);
+				float spotlightEffect = smoothstep(cos(radians(_Lights[i].umbra)), cos(radians(_Lights[i].penumbra)), theta);
 
-				
+				float attenuation = calculateWindowed(lightDistance, _Lights[i].radius, 2);
 
+				lightIntensity *= spotlightEffect * attenuation;
 				break;
 			// NONE
 			default:
+				
 				break;
 		}
 
@@ -83,7 +87,6 @@ void main(){
 		lightColor += _Material.ambientK * _Lights[i].color;
 
 		//Diffuse
-		vec3 w = normalize(_Lights[i].position - fs_in.WorldPosition);
 		lightColor += _Lights[i].color * _Material.diffuseK * max(dot(normal, w), 0);
 
 		//Specular 
