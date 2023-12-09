@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <vector>
+#include <filesystem>
 
 #include <ew/external/glad.h>
 #include <ew/ewMath/ewMath.h>
@@ -15,11 +16,13 @@
 #include <ew/transform.h>
 #include <ew/camera.h>
 #include <ew/cameraController.h>
+#include <ew/external/stb_image.h>
 
 #include <gjn/cubemap.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
+ew::Mat4 mat3Conversion(const ew::Mat4& m);
 
 int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
@@ -33,58 +36,38 @@ ew::Vec3 bgColor = ew::Vec3(0.1f);
 ew::Camera camera;
 ew::CameraController cameraController;
 
-std::vector<std::string> cubemapFaces {
-	"right.jpg",
-	"left.jpg",
-	"top.jpg",
-	"bottom.jpg",
-	"back.jpg",
-	"front.jpg"
+float skyboxVertices[] {
+	//Coordinates
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f
 };
 
-float skyboxVertices[] {
-	// positions          
-	-1.0f,  1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	-1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f
+unsigned int skyboxIndices[] =
+{
+	// Right
+	1, 2, 6,
+	6, 5, 1,
+	// Left
+	0, 4, 7,
+	7, 3, 0,
+	// Top
+	4, 5, 6,
+	6, 7, 4,
+	// Bottom
+	0, 3, 2,
+	2, 1, 0,
+	// Back
+	0, 1, 5,
+	5, 4, 0,
+	// Front
+	3, 7, 6,
+	6, 2, 3
 };
 
 struct Light {
@@ -134,7 +117,6 @@ int main() {
 	ew::Shader shader("assets/defaultLit.vert", "assets/defaultLit.frag");
 	ew::Shader unlitShader("assets/unlit.vert", "assets/unlit.frag");
 	ew::Shader skyboxShader("assets/skybox.vert", "assets/skybox.frag");
-	unsigned int cubemapTexture = gjn::loadCubemap(cubemapFaces);
 	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg",GL_REPEAT,GL_LINEAR);
 
 	//Create meshes
@@ -183,21 +165,74 @@ int main() {
 	mat.ambientK = 0.2;
 	mat.shininess = 8.0;
 
-	glEnable(GL_DEPTH_TEST);
+	skyboxShader.use();
+	skyboxShader.setInt("_Skybox", 0);
 
 	//Skybox VAO + VBO
-	unsigned int skyboxVAO, skyboxVBO;
+	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
+	glGenBuffers(1, &skyboxEBO);
 	glBindVertexArray(skyboxVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	//Skybox shader config
-	skyboxShader.use();
-	skyboxShader.setInt("_Skybox", 0);
+	std::string facesCubemap[6] =
+	{
+		"assets/right.jpg",
+		"assets/left.jpg",
+		"assets/top.jpg",
+		"assets/bottom.jpg",
+		"assets/front.jpg",
+		"assets/back.jpg",
+	};
+
+	// Creates the cubemap texture object
+	unsigned int cubemapTexture;
+	glGenTextures(1, &cubemapTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// These are very important to prevent seams
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	
+	// Cycles through all the textures and attaches them to the cubemap object
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		int width, height, nrChannels;
+		unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+		{
+			stbi_set_flip_vertically_on_load(false);
+			glTexImage2D
+			(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0,
+				GL_RGB,
+				width,
+				height,
+				0,
+				GL_RGB,
+				GL_UNSIGNED_BYTE,
+				data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			printf("Failed to load texture: ", facesCubemap[i]);
+			stbi_image_free(data);
+		}
+	}
 
 	resetCamera(camera,cameraController);
 
@@ -266,16 +301,21 @@ int main() {
 		}
 
 		//Skybox
-		glDepthMask(GL_LEQUAL);
+		glDepthFunc(GL_LEQUAL);
 		skyboxShader.use();
-		skyboxShader.setMat4("_Projection", camera.ProjectionMatrix());
-		skyboxShader.setMat4("_View", camera.ViewMatrix());
+		ew::Mat4 view = ew::Mat4(1.0f);
+		ew::Mat4 projection = ew::Mat4(1.0f);
+		view = ew::Mat4(mat3Conversion(camera.ViewMatrix()));
+		projection = ew::Perspective(ew::Radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		skyboxShader.setMat4("_View", view);
+		skyboxShader.setMat4("_Projection", projection);
+
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
-		glDepthMask(GL_LESS);
+		glDepthFunc(GL_LESS);
 
 		//Render UI
 		{
@@ -365,6 +405,13 @@ void resetCamera(ew::Camera& camera, ew::CameraController& cameraController) {
 
 	cameraController.yaw = 0.0f;
 	cameraController.pitch = 0.0f;
+}
+
+ew::Mat4 mat3Conversion(const ew::Mat4& m) {
+	return ew::Mat4(m[0][0], m[1][0], m[2][0], 0.0f,
+					m[0][1], m[1][1], m[2][1], 0.0f,
+					m[0][2], m[1][2], m[2][2], 0.0f,
+					  0.0f,    0.0f,    0.0f,  1.0f);
 }
 
 
