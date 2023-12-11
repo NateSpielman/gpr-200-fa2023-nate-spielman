@@ -71,9 +71,9 @@ unsigned int skyboxIndices[] =
 };
 
 struct Light {
-	ew::Vec3 position, color, direction;
+	ew::Vec3 position, color, direction = ew::Vec3(0, -1, 0);
 	int lightType = -1;
-	float radius = 5, penumbra = 5, umbra = 30;
+	float radius = 5, penumbra = 10, umbra = 43;
 };
 
 struct Material {
@@ -117,7 +117,7 @@ int main() {
 	ew::Shader shader("assets/defaultLit.vert", "assets/defaultLit.frag");
 	ew::Shader unlitShader("assets/unlit.vert", "assets/unlit.frag");
 	ew::Shader skyboxShader("assets/skybox.vert", "assets/skybox.frag");
-	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg",GL_REPEAT,GL_LINEAR);
+	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg", GL_REPEAT,GL_LINEAR);
 
 	//Create meshes
 	ew::Mesh cubeMesh(ew::createCube(1.0f));
@@ -151,19 +151,14 @@ int main() {
 
 	ew::Transform lightTransforms[MAX_LIGHTS];
 
-	for (int i = 0; i < MAX_LIGHTS; i++)
-	{
+	for (int i = 0; i < MAX_LIGHTS; i++) {
 		lightTransforms[i].position = lights[i].position;
-		lightTransforms[i].direction = lights[i].direction;
 		lightTransforms[i].scale = ew::Vec3(0.5f);
 	}
 
 	//Set Material Values
-	Material mat;
-	mat.diffuseK = 0.4;
-	mat.specular = 0.4;
-	mat.ambientK = 0.2;
-	mat.shininess = 8.0;
+	// UPDATED TO AVOID INITALIZATION MESSAGE - JERRY KAUFMAN
+	Material mat = { 0.4, 0.4, 0.2, 8.0 }; 
 
 	skyboxShader.use();
 	skyboxShader.setInt("_Skybox", 0);
@@ -184,8 +179,7 @@ int main() {
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	std::string facesCubemap[6] =
-	{
+	std::string facesCubemap[6] = {
 		"assets/right.jpg",
 		"assets/left.jpg",
 		"assets/top.jpg",
@@ -206,12 +200,10 @@ int main() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	
 	// Cycles through all the textures and attaches them to the cubemap object
-	for (unsigned int i = 0; i < 6; i++)
-	{
+	for (unsigned int i = 0; i < 6; i++) {
 		int width, height, nrChannels;
 		unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data)
-		{
+		if (data) {
 			stbi_set_flip_vertically_on_load(false);
 			glTexImage2D
 			(
@@ -226,9 +218,7 @@ int main() {
 				data
 			);
 			stbi_image_free(data);
-		}
-		else
-		{
+		} else {
 			printf("Failed to load texture: ", facesCubemap[i]);
 			stbi_image_free(data);
 		}
@@ -269,7 +259,6 @@ int main() {
 		shader.setMat4("_Model", cylinderTransform.getModelMatrix());
 		cylinderMesh.draw();
 
-		//TODO: Render point lights
 		shader.setVec3("_CamPos", camera.position);
 		shader.setInt("_NumLights", numLights);
 
@@ -285,16 +274,17 @@ int main() {
 			shader.setVec3("_Lights[" + std::to_string(i) + "].direction", lights[i].direction);
 			shader.setInt("_Lights[" + std::to_string(i) + "].lightType", lights[i].lightType);
 			shader.setFloat("_Lights[" + std::to_string(i) + "].radius", lights[i].radius);
-			shader.setFloat("_Lights[" + std::to_string(i) + "].penumbra", lights[i].penumbra);
-			shader.setFloat("_Lights[" + std::to_string(i) + "].umbra", lights[i].umbra);
+
+			// GPU and CPU optimization
+			shader.setFloat("_Lights[" + std::to_string(i) + "].penumbra", cos(ew::Radians(lights[i].penumbra)));
+			shader.setFloat("_Lights[" + std::to_string(i) + "].umbra", cos(ew::Radians(lights[i].umbra)));
 
 		}
 
 		unlitShader.use();
 		unlitShader.setMat4("_ViewProjection", camera.ProjectionMatrix() * camera.ViewMatrix());
 
-		for (int i = 0; i < numLights; i++)
-		{
+		for (int i = 0; i < numLights; i++) {
 			unlitShader.setMat4("_Model", lightTransforms[i].getModelMatrix());
 			unlitShader.setVec3("_Color", lights[i].color);
 			sphereMesh.draw();
@@ -345,32 +335,54 @@ int main() {
 
 			ImGui::ColorEdit3("BG color", &bgColor.x);
 
-			if (ImGui::CollapsingHeader("Material"))
-			{
+			if (ImGui::CollapsingHeader("Material")) {
 				ImGui::DragFloat("AmbientK", &mat.ambientK, 0.1f, 0.0f, 1.0f);
 				ImGui::DragFloat("DiffuseK", &mat.diffuseK, 0.1f, 0.0f, 1.0f);
 				ImGui::DragFloat("SpecularK", &mat.specular, 0.1f, 0.0f, 1.0f);
 				ImGui::DragFloat("Shininess", &mat.shininess, 0.1f, 2.0f);
 			}
 
-			ImGui::DragInt("Number of Lights", &numLights, 1.0f, 1, MAX_LIGHTS);
+			ImGui::SliderInt("# of Lights", &numLights, 1, MAX_LIGHTS);
 
 			// UPDATED GUI WITH A FOR LOOP - JERRY KAUFMAN
 			for (int i = 0; i < numLights; i++) {
 				ImGui::PushID(i);
-				if (ImGui::CollapsingHeader("Lights")) {
+
+				if (ImGui::CollapsingHeader(("Light: " + std::to_string(i + 1)).c_str())) {
 					ImGui::DragFloat3("Position", &lightTransforms[i].position.x, 0.1f);
 					ImGui::ColorEdit3("Color", &lights[i].color.x, 0.1f);
-					ImGui::DragInt("Light Type", &lights[i].lightType, 1.0f, -1, 2);
+					ImGui::SliderInt("Light Type", &lights[i].lightType, -1, 2);
+
+					// Specific controls for point light type
 					if (lights[i].lightType == 0) {
+						ImGui::Text("\nType - Point Light: ");
 						ImGui::DragFloat("Radius", &lights[i].radius, 1.0f, 0, 100);
 					}
+					// Specific controls for directional light type
 					else if (lights[i].lightType == 1) {
-						ImGui::DragFloat3("Direction", &lightTransforms[i].direction.x, 0.1f);
+						ImGui::Text("\nType - Directional: ");
+						ImGui::DragFloat3("Direction", &lights[i].direction.x, 0.1f);
 					}
+					// Specific controls for spotlight light type
 					else if (lights[i].lightType == 2) {
-						ImGui::DragFloat("Penumbra", &lights[i].penumbra, 1.0f, 1, 100);
-						ImGui::DragFloat("Umbra", &lights[i].umbra, 1.0f, 0, 100);
+						ImGui::Text("\nType - Spotlight: ");
+						ImGui::DragFloat("Penumbra", &lights[i].penumbra, 1.0f, 1, 90);
+						ImGui::DragFloat("Umbra", &lights[i].umbra, 1.0f, 0, 90);
+
+						// Clamps the penumbra and umbra.
+						// - Penumbra can never be larger than umbra
+						// - Umbra can never be smaller than penumbra
+						if (lights[i].penumbra > lights[i].umbra) {
+							lights[i].penumbra = lights[i].umbra;
+						} else if (lights[i].umbra < lights[i].penumbra) {
+							lights[i].umbra = lights[i].penumbra;
+						} else {}
+
+						ImGui::DragFloat3("Direction", &lights[i].direction.x, 0.1f);
+						ImGui::DragFloat("Radius", &lights[i].radius, 1.0f, 0, 100);
+					}
+					else {
+						ImGui::Text("\nType - NONE ");
 					}
 				}
 				ImGui::PopID();
@@ -413,5 +425,3 @@ ew::Mat4 mat3Conversion(const ew::Mat4& m) {
 					m[0][2], m[1][2], m[2][2], 0.0f,
 					  0.0f,    0.0f,    0.0f,  1.0f);
 }
-
-
