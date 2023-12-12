@@ -63,7 +63,9 @@ void main(){
 				lightDistance = length(_Lights[i].position - fs_in.WorldPosition);
 
 				// CALCULATES UE WINDOWED USING THE LIGHT DISTANCE AND THE RADIUS OF THE LIGHTS WITH CLAMPED 0-1
-				lightIntensity = calculateWindowed(lightDistance, _Lights[i].radius, 2);
+				attenuation = calculateWindowed(lightDistance, _Lights[i].radius, 2);
+				
+				lightIntensity *= attenuation;
 				break;
 			// DIRECTIONAL
 			case 1:
