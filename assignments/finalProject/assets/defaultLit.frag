@@ -37,6 +37,20 @@ uniform Material _Material;
 uniform vec3 _CamPos;
 uniform sampler2D _Texture;
 
+//Terrain texture
+uniform sampler2D _TextureSnow;
+uniform sampler2D _TextureGrass;
+uniform sampler2D _TextureRock;
+
+//Terrain uniforms
+uniform float _terMinY;
+uniform float _terMaxY;
+
+uniform float _HBTrange1;
+uniform float _HBTrange2;
+uniform float _HBTrange3;
+uniform float _HBTrange4;
+
 /*     Pre:  Uniform values from Lights distance and radius. Takes in clamp range. 
 *  Purpose:  Calculate UE windows for spotlight and point light
 *************************************************************/
@@ -44,9 +58,62 @@ float calculateWindowed(float lDistance, float lRadius, int clampValue) {
 	return pow(clamp((1.0 - pow((lDistance / lRadius), 4)), 0, 1), clampValue);
 }
 
+/*     Pre:  Scale of where vertex is vertically relation to the rest of terrain. 
+ *  Purpose:  Calculate texture based on height of vertex
+*************************************************************/
+vec4 heightBasedTexture(float scaleIn)
+{
+		vec4 color;
+
+		//If vertex below range 1 texture as rock
+		if (scaleIn >= 0.0 && scaleIn <= _HBTrange1)
+		{
+			color = texture(_TextureRock,fs_in.UV);
+		}
+		//If vertex between range1 and range2 texture as mix between rock and grass
+		else if (scaleIn <= _HBTrange2)
+		{
+			scaleIn -= _HBTrange1;
+			scaleIn /= (_HBTrange2 - _HBTrange1);
+
+			float scaletmp = scaleIn;
+			scaleIn = 1.0f - scaleIn;
+
+			color += texture(_TextureRock,fs_in.UV) * scaleIn;
+			color += texture(_TextureGrass,fs_in.UV) * scaletmp;
+		}
+		//If vertex between range2 and range 3 texture as grass
+		else if (scaleIn <= _HBTrange3)
+		{
+			color = texture(_TextureGrass,fs_in.UV);
+		}
+		//If vertex between range3 and range4 texture as mix between grass and snow
+		else if (scaleIn <= _HBTrange4)
+		{
+			scaleIn -= _HBTrange3;
+			scaleIn /= (_HBTrange4 - _HBTrange3);
+
+			float scaletmp = scaleIn;
+			scaleIn = 1.0f - scaleIn;
+
+			color += texture(_TextureGrass,fs_in.UV) * scaleIn;
+			color += texture(_TextureSnow,fs_in.UV) * scaletmp;
+		}
+		//If vertex above range4 texture as snow
+		else
+		{
+			color = texture(_TextureSnow,fs_in.UV);
+		}
+
+		return color;
+}
+
 void main(){
 	vec3 normal = normalize(fs_in.WorldNormal);
-	vec4 newTexture =  texture(_Texture,fs_in.UV);
+
+	float scale = abs(fs_in.WorldPosition.y - _terMinY) / abs(_terMaxY - _terMinY);
+	vec4 newTexture =  heightBasedTexture(scale);
+
 	vec3 v = normalize(_CamPos - fs_in.WorldPosition);
 	vec3 totalLightColor, h;
 	float lightIntensity = 1.0f;

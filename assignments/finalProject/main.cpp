@@ -20,8 +20,11 @@
 
 #include <gjn/cubemap.h>
 
+#include <JSLib/terrain.h>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
+void resetTerrain(ew::Transform& terrainTransform, float& HBTrange1, float& HBTrange2, float& HBTrange3, float& HBTrange4);
 ew::Mat4 mat3Conversion(const ew::Mat4& m);
 
 int SCREEN_WIDTH = 1080;
@@ -117,37 +120,52 @@ int main() {
 	ew::Shader shader("assets/defaultLit.vert", "assets/defaultLit.frag");
 	ew::Shader unlitShader("assets/unlit.vert", "assets/unlit.frag");
 	ew::Shader skyboxShader("assets/skybox.vert", "assets/skybox.frag");
-	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg", GL_REPEAT,GL_LINEAR);
 
-	//Create meshes
-	ew::Mesh cubeMesh(ew::createCube(1.0f));
-	ew::Mesh planeMesh(ew::createPlane(5.0f, 5.0f, 10));
+	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg", GL_REPEAT,GL_LINEAR);
+	unsigned int snowTexture = ew::loadTexture("assets/textures/snow_color.jpg", GL_REPEAT, GL_LINEAR);
+	unsigned int grassTexture = ew::loadTexture("assets/textures/grass_color.jpg", GL_REPEAT, GL_LINEAR);
+	unsigned int rockTexture = ew::loadTexture("assets/textures/rock_color.jpg", GL_REPEAT, GL_LINEAR);
+
+	//Create terrain mesh
+	ew::Mesh terrainMesh1(JSLib::createTerrain("assets/heightmaps/heightmap01.jpg"));
+	ew::Mesh terrainMesh2(JSLib::createTerrain("assets/heightmaps/heightmap02.jpg"));
+	ew::Mesh terrainMesh3(JSLib::createTerrain("assets/heightmaps/heightmap03.jpg"));
+
 	ew::Mesh sphereMesh(ew::createSphere(0.5f, 64));
-	ew::Mesh cylinderMesh(ew::createCylinder(0.5f, 1.0f, 32));
 
 	//Initialize transforms
-	ew::Transform cubeTransform;
-	ew::Transform planeTransform;
+	ew::Transform terrainTransform;
+	terrainTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
+
 	ew::Transform sphereTransform;
-	ew::Transform cylinderTransform;
-	planeTransform.position = ew::Vec3(0, -1.0, 0);
 	sphereTransform.position = ew::Vec3(-1.5f, 0.0f, 0.0f);
-	cylinderTransform.position = ew::Vec3(1.5f, 0.0f, 0.0f);
+
+
+	//Initialize UI uniforms
+	int heightmapNum = 1;
+
+	float terMinY, terMaxY;
+
+	float HBTrange1 = 0.15f;
+	float HBTrange2 = 0.3f;
+	float HBTrange3 = 0.65f;
+	float HBTrange4 = 0.85f;
 
 	//Initialize Lights
 	Light lights[MAX_LIGHTS];
 
-	lights[0].position = ew::Vec3(2.0f, 1.0f, 0.0f);
-	lights[0].color = ew::Vec3(1.0f, 0.0f, 0.0f);
+	lights[0].position = ew::Vec3(2.0f, 65.0f, 0.0f);
+	lights[0].color = ew::Vec3(1.0f, 1.0f, 1.0f);
+	lights[0].lightType = 1;
 
-	lights[1].position = ew::Vec3(0.0f, 1.0f, 2.0f);
-	lights[1].color = ew::Vec3(0.0f, 1.0f, 0.0f);
+	lights[1].position = ew::Vec3(0.0f, 65.0f, 2.0f);
+	lights[1].color = ew::Vec3(1.0f, 0.0f, 0.0f);
 
-	lights[2].position = ew::Vec3(-2.0f, 1.0f, 0.0f);
-	lights[2].color = ew::Vec3(0.0f, 0.0f, 1.0f);
+	lights[2].position = ew::Vec3(-2.0f, 65.0f, 0.0f);
+	lights[2].color = ew::Vec3(0.0f, 1.0f, 0.0f);
 
-	lights[3].position = ew::Vec3(0.0f, 1.0f, -2.0f);
-	lights[3].color = ew::Vec3(1.0f, 1.0f, 0.0f);
+	lights[3].position = ew::Vec3(0.0f, 65.0f, -2.0f);
+	lights[3].color = ew::Vec3(0.0f, 0.0f, 1.0f);
 
 	ew::Transform lightTransforms[MAX_LIGHTS];
 
@@ -226,6 +244,11 @@ int main() {
 
 	resetCamera(camera,cameraController);
 
+	//Camera stuff to see terrain better
+	camera.farPlane = 200.0f;
+	camera.position.y = 75.0f;
+	camera.target.y = 75.0f;
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -241,24 +264,28 @@ int main() {
 		glClearColor(bgColor.x, bgColor.y,bgColor.z,1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		//Update terrain minimum Y and max Y
+		terMinY = terrainTransform.position.y;
+		terMaxY = terrainTransform.position.y + (64.0f * terrainTransform.scale.y);
+
 		shader.use();
-		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		shader.setInt("_Texture", 0);
+		
+		//Bind textures
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, snowTexture);
+		shader.setInt("_TextureSnow", 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, grassTexture);
+		shader.setInt("_TextureGrass", 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, rockTexture);
+		shader.setInt("_TextureRock", 2);
+
 		shader.setMat4("_ViewProjection", camera.ProjectionMatrix() * camera.ViewMatrix());
 
 		//Draw shapes
-		shader.setMat4("_Model", cubeTransform.getModelMatrix());
-		cubeMesh.draw();
-
-		shader.setMat4("_Model", planeTransform.getModelMatrix());
-		planeMesh.draw();
-
-		shader.setMat4("_Model", sphereTransform.getModelMatrix());
-		sphereMesh.draw();
-
-		shader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		cylinderMesh.draw();
-
 		shader.setVec3("_CamPos", camera.position);
 		shader.setInt("_NumLights", numLights);
 
@@ -279,6 +306,33 @@ int main() {
 			shader.setFloat("_Lights[" + std::to_string(i) + "].penumbra", cos(ew::Radians(lights[i].penumbra)));
 			shader.setFloat("_Lights[" + std::to_string(i) + "].umbra", cos(ew::Radians(lights[i].umbra)));
 
+		}
+
+		//Terrain UI uniforms
+		shader.setFloat("_terMinY", terMinY);
+		shader.setFloat("_terMaxY", terMaxY);
+
+		shader.setFloat("_HBTrange1", HBTrange1);
+		shader.setFloat("_HBTrange2", HBTrange2);
+		shader.setFloat("_HBTrange3", HBTrange3);
+		shader.setFloat("_HBTrange4", HBTrange4);
+
+		//Draw terrain
+		shader.setMat4("_Model", terrainTransform.getModelMatrix());
+		switch (heightmapNum)
+		{
+		case 1:
+			terrainMesh1.draw();
+			break;
+		case 2:
+			terrainMesh2.draw();
+			break;
+		case 3:
+			terrainMesh3.draw();
+			break;
+		default:
+			terrainMesh1.draw();
+			break;
 		}
 
 		unlitShader.use();
@@ -388,6 +442,26 @@ int main() {
 				ImGui::PopID();
 			}
 
+			//Terrain UI
+			if (ImGui::CollapsingHeader("Terrain"))
+			{
+				ImGui::SliderInt("Heightmap", &heightmapNum, 1, 3);
+				ImGui::DragFloat3("Position", &terrainTransform.position.x, 0.1f);
+				ImGui::DragFloat3("Scale", &terrainTransform.scale.x, 0.1f);
+
+				if (ImGui::CollapsingHeader("Height Based Texturing Ranges"))
+				{
+					ImGui::DragFloat("Range 1", &HBTrange1, 0.05f, 0.0f, 1.0f);
+					ImGui::DragFloat("Range 2", &HBTrange2, 0.05f, 0.0f, 1.0f);
+					ImGui::DragFloat("Range 3", &HBTrange3, 0.05f, 0.0f, 1.0f);
+					ImGui::DragFloat("Range 4", &HBTrange4, 0.05f, 0.0f, 1.0f);
+				}
+
+				if (ImGui::Button("Reset Terrain")) {
+					resetTerrain(terrainTransform, HBTrange1, HBTrange2, HBTrange3, HBTrange4);
+				}
+			}
+
 			ImGui::End();
 			
 			ImGui::Render();
@@ -417,6 +491,18 @@ void resetCamera(ew::Camera& camera, ew::CameraController& cameraController) {
 
 	cameraController.yaw = 0.0f;
 	cameraController.pitch = 0.0f;
+}
+
+//Terrain reset
+void resetTerrain(ew::Transform& terrainTransform, float& HBTrange1, float& HBTrange2, float& HBTrange3, float& HBTrange4)
+{
+	terrainTransform.position = ew::Vec3(0.0f);
+	terrainTransform.scale = ew::Vec3(1.0f);
+
+	HBTrange1 = 0.15f;
+	HBTrange2 = 0.3f;
+	HBTrange3 = 0.65f;
+	HBTrange4 = 0.85f;
 }
 
 ew::Mat4 mat3Conversion(const ew::Mat4& m) {
