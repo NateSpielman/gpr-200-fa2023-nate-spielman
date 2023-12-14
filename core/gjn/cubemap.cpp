@@ -1,3 +1,6 @@
+/*
+    Author: Nate Spielman
+*/
 #include "cubemap.h"
 #include "../ew/external/stb_image.h"
 #include "../ew/external/glad.h"

@@ -1,3 +1,6 @@
+/*
+	Author: Nate Spielman
+*/
 #pragma once
 #include <sstream>
 #include <vector>

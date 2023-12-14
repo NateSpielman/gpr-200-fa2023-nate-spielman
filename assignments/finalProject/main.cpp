@@ -39,40 +39,6 @@ ew::Vec3 bgColor = ew::Vec3(0.1f);
 ew::Camera camera;
 ew::CameraController cameraController;
 
-float skyboxVertices[] {
-	//Coordinates
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	-1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f
-};
-
-unsigned int skyboxIndices[] =
-{
-	// Right
-	1, 2, 6,
-	6, 5, 1,
-	// Left
-	0, 4, 7,
-	7, 3, 0,
-	// Top
-	4, 5, 6,
-	6, 7, 4,
-	// Bottom
-	0, 3, 2,
-	2, 1, 0,
-	// Back
-	0, 1, 5,
-	5, 4, 0,
-	// Front
-	3, 7, 6,
-	6, 2, 3
-};
-
 struct Light {
 	ew::Vec3 position, color, direction = ew::Vec3(0, -1, 0);
 	int lightType = -1;
@@ -133,6 +99,9 @@ int main() {
 
 	ew::Mesh sphereMesh(ew::createSphere(0.5f, 64));
 
+	//Create skybox mesh
+	ew::Mesh skyboxMesh = ew::Mesh(ew::createCube(2));
+
 	//Initialize transforms
 	ew::Transform terrainTransform;
 	terrainTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
@@ -178,69 +147,19 @@ int main() {
 	// UPDATED TO AVOID INITALIZATION MESSAGE - JERRY KAUFMAN
 	Material mat = { 0.4, 0.4, 0.2, 8.0 }; 
 
+	//Skybox shader configuration
 	skyboxShader.use();
 	skyboxShader.setInt("_Skybox", 0);
 
-	//Skybox VAO + VBO
-	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
-	glGenVertexArrays(1, &skyboxVAO);
-	glGenBuffers(1, &skyboxVBO);
-	glGenBuffers(1, &skyboxEBO);
-	glBindVertexArray(skyboxVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	std::string facesCubemap[6] = {
-		"assets/right.jpg",
-		"assets/left.jpg",
-		"assets/top.jpg",
-		"assets/bottom.jpg",
-		"assets/front.jpg",
-		"assets/back.jpg",
+	std::vector<std::string> faces {
+			"assets/right.jpg",
+			"assets/left.jpg",
+			"assets/top.jpg",
+			"assets/bottom.jpg",
+			"assets/front.jpg",
+			"assets/back.jpg"
 	};
-
-	// Creates the cubemap texture object
-	unsigned int cubemapTexture;
-	glGenTextures(1, &cubemapTexture);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// These are very important to prevent seams
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	
-	// Cycles through all the textures and attaches them to the cubemap object
-	for (unsigned int i = 0; i < 6; i++) {
-		int width, height, nrChannels;
-		unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data) {
-			stbi_set_flip_vertically_on_load(false);
-			glTexImage2D
-			(
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0,
-				GL_RGB,
-				width,
-				height,
-				0,
-				GL_RGB,
-				GL_UNSIGNED_BYTE,
-				data
-			);
-			stbi_image_free(data);
-		} else {
-			printf("Failed to load texture: ", facesCubemap[i]);
-			stbi_image_free(data);
-		}
-	}
+	unsigned int cubemapTexture = gjn::loadCubemap(faces);
 
 	resetCamera(camera,cameraController);
 
@@ -346,19 +265,15 @@ int main() {
 
 		//Skybox
 		glDepthFunc(GL_LEQUAL);
+		glCullFace(GL_FRONT);
 		skyboxShader.use();
-		ew::Mat4 view = ew::Mat4(1.0f);
-		ew::Mat4 projection = ew::Mat4(1.0f);
-		view = ew::Mat4(mat3Conversion(camera.ViewMatrix()));
-		projection = ew::Perspective(ew::Radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		ew::Mat4 view = ew::Mat4(mat3Conversion(camera.ViewMatrix()));
 		skyboxShader.setMat4("_View", view);
-		skyboxShader.setMat4("_Projection", projection);
-
-		glBindVertexArray(skyboxVAO);
+		skyboxShader.setMat4("_Projection", camera.ProjectionMatrix());
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		skyboxMesh.draw();
+		glCullFace(GL_BACK);
 		glDepthFunc(GL_LESS);
 
 		//Render UI
@@ -509,5 +424,5 @@ ew::Mat4 mat3Conversion(const ew::Mat4& m) {
 	return ew::Mat4(m[0][0], m[1][0], m[2][0], 0.0f,
 					m[0][1], m[1][1], m[2][1], 0.0f,
 					m[0][2], m[1][2], m[2][2], 0.0f,
-					  0.0f,    0.0f,    0.0f,  1.0f);
+					m[0][3], m[1][3], m[2][3], 1.0f);
 }
